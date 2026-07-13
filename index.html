@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MiMo TTS Studio</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#08080a;--surface:#111114;--surface-2:#19191d;--surface-3:#212126;
+  --border:#2a2a30;--border-focus:#3a3a42;
+  --accent:#c8a45c;--accent-dim:#a68940;--accent-glow:rgba(200,164,92,.12);
+  --text:#e8e5de;--text-sec:#9b978e;--text-muted:#5e5b55;
+  --success:#5cb87a;--error:#d94f4f;--warning:#e0a840;
+  --shadow:0 2px 20px rgba(0,0,0,.3);
+  --noise-opacity:.03;--btn-text:#0a0a0b;--rec-red:#e04040;
+}
+[data-theme="light"]{
+  --bg:#f4f1fa;--surface:#ffffff;--surface-2:#f0ecf7;--surface-3:#e8e2f2;
+  --border:#ddd6ec;--border-focus:#c4b8e0;
+  --accent:#7c5cbf;--accent-dim:#6a4db0;--accent-glow:rgba(124,92,191,.10);
+  --text:#2a2040;--text-sec:#6b6080;--text-muted:#9990a8;
+  --success:#3da55d;--error:#d04040;--warning:#c89020;
+  --shadow:0 2px 20px rgba(100,80,160,.07);
+  --noise-opacity:.012;--btn-text:#ffffff;--rec-red:#d04040;
+}
+html{font-size:15px;scroll-behavior:smooth}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased;padding-bottom:3rem;
+  transition:background .4s,color .4s}
+body::before{content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity:var(--noise-opacity);pointer-events:none;z-index:9999}
+.header{padding:2.8rem 2rem 1.5rem;text-align:center}
+.logo{font-family:'Instrument Serif',serif;font-size:2.8rem;letter-spacing:-.02em}
+.logo em{color:var(--accent);font-style:italic}
+.subtitle{font-size:.72rem;color:var(--text-muted);letter-spacing:.18em;text-transform:uppercase;font-weight:300}
+.theme-toggle{position:fixed;top:1.2rem;right:1.2rem;z-index:1000;width:44px;height:44px;
+  border-radius:12px;background:var(--surface);border:1px solid var(--border);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .3s;box-shadow:var(--shadow);overflow:hidden}
+.theme-toggle:hover{border-color:var(--accent);transform:scale(1.08)}
+.theme-toggle svg{width:20px;height:20px;fill:var(--text-sec);transition:fill .3s,opacity .35s,transform .4s;position:absolute}
+.theme-toggle:hover svg{fill:var(--accent)}
+[data-theme="dark"] .icon-sun{opacity:1;transform:rotate(0) scale(1)}
+[data-theme="dark"] .icon-moon{opacity:0;transform:rotate(-90deg) scale(.5)}
+[data-theme="light"] .icon-sun{opacity:0;transform:rotate(90deg) scale(.5)}
+[data-theme="light"] .icon-moon{opacity:1;transform:rotate(0) scale(1)}
+.container{max-width:900px;margin:0 auto;padding:1.5rem 1.5rem 2rem}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.5rem;margin-bottom:1rem;box-shadow:var(--shadow);transition:border-color .3s}
+.section:hover{border-color:var(--border-focus)}
+.section-hd{display:flex;align-items:center;gap:.6rem;margin-bottom:1.2rem}
+.section-hd.no-mb{margin-bottom:0}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--accent);
+  background:var(--accent-glow);border:1px solid var(--accent-glow);border-radius:4px;
+  padding:.15rem .4rem;letter-spacing:.05em}
+.section-title{font-family:'Instrument Serif',serif;font-size:1.15rem;font-weight:400}
+.collapse-btn{width:28px;height:28px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-left:auto;flex-shrink:0;
+  font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--text-muted);line-height:1}
+.collapse-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+.section-body{overflow:hidden;transition:max-height .4s ease,opacity .3s ease,padding .3s ease;max-height:2000px;opacity:1}
+.section-body.collapsed{max-height:0!important;opacity:0;padding-top:0!important;margin:0}
+.form-g{margin-bottom:1rem}.form-g:last-child{margin-bottom:0}
+label{display:block;font-size:.78rem;color:var(--text-sec);margin-bottom:.35rem;letter-spacing:.02em}
+label .hint{font-size:.68rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-left:.3rem}
+input[type="text"],input[type="password"],select,textarea{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:.65rem .85rem;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.82rem;
+  outline:none;transition:all .25s;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+input::placeholder,textarea::placeholder{color:var(--text-muted);font-style:italic}
+select{cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%239990a8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .9rem center;padding-right:2.2rem}
+[data-theme="dark"] select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%236b6860' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")}
+textarea{resize:vertical;min-height:110px;line-height:1.7}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.pw-wrap{position:relative}
+.pw-toggle{position:absolute;right:.7rem;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.85rem;padding:.2rem}
+.pw-toggle:hover{color:var(--text-sec)}
+.url-presets{display:flex;gap:.4rem;margin-bottom:.55rem;flex-wrap:wrap}
+.url-preset{font-family:'JetBrains Mono',monospace;font-size:.66rem;padding:.3rem .65rem;
+  background:var(--surface-3);border:1px solid var(--border);border-radius:6px;
+  color:var(--text-sec);cursor:pointer;transition:all .2s;white-space:nowrap}
+.url-preset:hover{border-color:var(--accent-dim);color:var(--accent)}
+.url-preset.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent)}
+.range-row{display:flex;align-items:center;gap:.8rem}
+.range-val{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);min-width:3rem;text-align:right}
+input[type="range"]{-webkit-appearance:none;appearance:none;height:4px;background:var(--surface-3);
+  border-radius:2px;outline:none;border:none;padding:0;flex:1}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+  background:var(--accent);border-radius:50%;cursor:pointer;transition:transform .15s}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+input[type="range"]::-moz-range-thumb{width:16px;height:16px;background:var(--accent);border-radius:50%;cursor:pointer;border:none}
+.char-ctr{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.68rem;
+  color:var(--text-muted);margin-top:.3rem}
+.char-ctr.warn{color:var(--warning)}.char-ctr.err{color:var(--error)}
+.mode-selector{display:flex;gap:.5rem;margin-bottom:1rem}
+.mode-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:.8rem .5rem;text-align:center;cursor:pointer;transition:all .25s;flex:1;
+  box-shadow:var(--shadow);position:relative;overflow:hidden}
+.mode-card:hover{border-color:var(--border-focus);transform:translateY(-2px)}
+.mode-card.active{border-color:var(--accent);background:var(--accent-glow)}
+.mode-card.active::after{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:24px;height:2px;background:var(--accent);border-radius:0 0 2px 2px}
+.mode-icon{width:28px;height:28px;margin:0 auto .4rem;fill:var(--text-muted);transition:fill .3s}
+.mode-card:hover .mode-icon{fill:var(--text-sec)}
+.mode-card.active .mode-icon{fill:var(--accent)}
+.mode-label{font-size:.75rem;font-weight:500;color:var(--text-sec);transition:color .3s}
+.mode-card.active .mode-label{color:var(--accent)}
+.mode-panel{display:none;animation:fadeSlideUp .35s ease}
+.mode-panel.active{display:block}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.audio-input{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:1.2rem;transition:all .3s}
+.method-tabs{display:flex;gap:0;margin-bottom:1rem;background:var(--surface-3);border-radius:8px;padding:3px}
+.method-tab{flex:1;padding:.5rem;text-align:center;font-size:.78rem;border:none;background:transparent;
+  color:var(--text-muted);cursor:pointer;border-radius:6px;transition:all .2s;font-family:inherit}
+.method-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.method-tab:hover:not(.active){color:var(--text-sec)}
+.record-ui{display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1rem 0}
+.record-ui.hidden{display:none}
+.rec-btn{width:64px;height:64px;border-radius:50%;border:3px solid var(--border);
+  background:var(--surface-2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .25s}
+.rec-btn:hover{border-color:var(--accent);transform:scale(1.05)}
+.rec-btn.recording{border-color:var(--rec-red);background:rgba(224,64,64,.06);animation:pulse-red 1.5s ease infinite}
+.rec-dot{width:22px;height:22px;border-radius:50%;background:var(--rec-red);transition:all .25s}
+.rec-btn.recording .rec-dot{border-radius:4px;width:18px;height:18px}
+@keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(224,64,64,.2)}50%{box-shadow:0 0 0 12px rgba(224,64,64,0)}}
+.rec-timer{font-family:'JetBrains Mono',monospace;font-size:1.3rem;color:var(--text-sec);letter-spacing:.05em}
+.rec-timer.active{color:var(--rec-red)}
+.rec-hint{font-size:.72rem;color:var(--text-muted);text-align:center}
+.wave-bars{display:flex;gap:3px;height:32px;align-items:center;opacity:0;transition:opacity .3s}
+.wave-bars.active{opacity:1}
+.wb{display:block;width:3px;height:5px;background:var(--rec-red);border-radius:2px;transition:height .15s}
+.upload-ui{padding:.5rem 0}.upload-ui.hidden{display:none}
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:2rem 1rem;text-align:center;
+  cursor:pointer;transition:all .25s;position:relative}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-glow)}
+.drop-zone-icon{width:36px;height:36px;margin:0 auto .5rem;fill:var(--text-muted);transition:fill .3s}
+.drop-zone:hover .drop-zone-icon{fill:var(--accent)}
+.drop-zone p{font-size:.82rem;color:var(--text-sec);margin-bottom:.2rem}
+.drop-zone .sub{font-size:.68rem;color:var(--text-muted)}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.audio-preview{margin-top:.8rem;display:flex;align-items:center;gap:.8rem;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem}
+.audio-preview.hidden{display:none}
+.audio-preview audio{flex:1;height:34px;min-width:0}
+.audio-preview .file-info{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text-muted);white-space:nowrap}
+.audio-preview .re-btn{font-size:.68rem;padding:.25rem .55rem;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:5px;color:var(--text-sec);cursor:pointer;
+  font-family:'JetBrains Mono',monospace;transition:all .2s;white-space:nowrap}
+.audio-preview .re-btn:hover{border-color:var(--accent);color:var(--accent)}
+.coll-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;
+  background:none;border:none;color:inherit;font:inherit;width:100%}
+.coll-toggle .arr{transition:transform .2s;font-size:.6rem;color:var(--text-muted);display:inline-block}
+.coll-toggle.expanded .arr{transform:rotate(90deg)}
+.coll-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.coll-body.expanded{max-height:2000px}
+.gen-btn{width:100%;padding:1rem 2rem;background:var(--accent);color:var(--btn-text);border:none;
+  border-radius:10px;font-family:'Noto Sans SC',sans-serif;font-size:.95rem;font-weight:600;
+  cursor:pointer;transition:all .25s;position:relative;overflow:hidden;letter-spacing:.05em;
+  margin-top:.6rem;box-shadow:0 4px 15px var(--accent-glow)}
+.gen-btn:hover{background:var(--accent-dim);transform:translateY(-1px);box-shadow:0 8px 30px var(--accent-glow)}
+.gen-btn:active{transform:translateY(0)}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.gen-btn .bt{transition:opacity .2s}
+.gen-btn .bl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.gen-btn.loading .bt{opacity:0}.gen-btn.loading .bl{opacity:1}
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;
+  border-radius:50%;animation:spin .6s linear infinite}
+[data-theme="dark"] .spinner{border-color:rgba(10,10,11,.25);border-top-color:var(--btn-text)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.result-area{margin-top:1rem;display:none;animation:fadeSlideUp .4s ease}
+.result-area.visible{display:block}
+.result-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;box-shadow:var(--shadow)}
+.result-box h3{font-family:'Instrument Serif',serif;font-size:1.1rem;margin-bottom:.8rem}
+.result-text{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:1rem;font-size:.85rem;line-height:1.8;white-space:pre-wrap;word-break:break-all;
+  color:var(--text);max-height:300px;overflow-y:auto}
+.result-meta{display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap}
+.meta-tag{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text-muted);
+  background:var(--surface-2);padding:.2rem .5rem;border-radius:4px}
+.result-actions{display:flex;gap:.5rem;margin-top:.8rem}
+.act-btn{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:.35rem .7rem;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
+  color:var(--text-sec);cursor:pointer;transition:all .25s}
+.act-btn:hover{border-color:var(--accent);color:var(--accent)}
+.player{display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.5rem;margin-top:1rem;box-shadow:var(--shadow);animation:fadeSlideUp .4s ease}
+.player.visible{display:block}
+.player-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
+.player-title{font-family:'Instrument Serif',serif;font-size:1.1rem}
+.player-meta{display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap}
+.ctrls{display:flex;align-items:center;gap:.7rem;margin-bottom:.5rem}
+.play-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:50%;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.play-btn:hover{background:var(--accent-dim);transform:scale(1.05)}
+.play-btn svg{fill:var(--btn-text);width:14px;height:14px}
+.prog-bar{flex:1;height:4px;background:var(--surface-3);border-radius:2px;cursor:pointer;position:relative}
+.prog-fill{height:100%;background:var(--accent);border-radius:2px;width:0;transition:width .1s linear}
+.prog-bar:hover .prog-fill{height:6px;margin-top:-1px}
+.time-txt{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted);min-width:3.8rem;text-align:right}
+.hist-list{display:flex;flex-direction:column;gap:.4rem}
+.hist-item{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:8px;transition:all .25s}
+.hist-item:hover{border-color:var(--accent-dim)}
+.hist-play{width:26px;height:26px;background:var(--surface-3);border:none;border-radius:50%;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s}
+.hist-play:hover{background:var(--accent-glow)}
+.hist-play svg{fill:var(--text-sec);width:9px;height:9px}
+.hist-play:hover svg{fill:var(--accent)}
+.hist-text{flex:1;font-size:.75rem;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-badge{font-family:'JetBrains Mono',monospace;font-size:.55rem;padding:.12rem .4rem;
+  border-radius:3px;background:var(--accent-glow);color:var(--accent);flex-shrink:0}
+.hist-time{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--text-muted);flex-shrink:0}
+.hist-del{width:20px;height:20px;background:none;border:none;cursor:pointer;color:var(--text-muted);
+  font-size:.85rem;opacity:0;transition:opacity .2s,color .2s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.hist-item:hover .hist-del{opacity:1}.hist-del:hover{color:var(--error)}
+.empty{text-align:center;padding:1.5rem;color:var(--text-muted);font-size:.8rem;font-style:italic}
+.toast{position:fixed;top:1.2rem;right:5rem;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:.7rem 1rem;font-size:.82rem;color:var(--text);
+  z-index:10000;opacity:0;transform:translateX(20px);transition:all .3s;max-width:420px;pointer-events:none;
+  box-shadow:0 8px 40px rgba(0,0,0,.3);white-space:pre-line;line-height:1.6}
+.toast.vis{opacity:1;transform:translateX(0)}.toast.err{border-color:rgba(208,64,64,.4)}.toast.ok{border-color:rgba(61,165,93,.4)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:680px){
+  .mode-selector{flex-wrap:wrap}
+  .mode-card{min-width:calc(50% - .25rem)}
+  .grid-2{grid-template-columns:1fr}
+  .header{padding:2rem 1rem 1.2rem}.logo{font-size:2.2rem}
+  .container{padding:1.2rem 1rem 2rem}.section{padding:1.1rem}
+  .theme-toggle{top:.8rem;right:.8rem;width:38px;height:38px;border-radius:10px}
+  .toast{right:1rem;top:4.5rem}
+}
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="themeToggle" title="切换主题">
+  <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 7a5 5 0 100 10 5 5 0 000-10zm0-4a1 1 0 011 1v1a1 1 0 11-2 0V4a1 1 0 011-1zm0 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm9-8a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5 12a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zm13.07-6.07a1 1 0 010 1.41l-.71.71a1 1 0 11-1.41-1.41l.71-.71a1 1 0 011.41 0zM8.46 16.95a1 1 0 010 1.41l-.71.71a1 1 0 11-1.41-1.41l.71-.71a1 1 0 011.41 0zM18.36 18.36a1 1 0 01-1.41 0l-.71-.71a1 1 0 111.41-1.41l.71.71a1 1 0 010 1.41zM7.76 7.76a1 1 0 01-1.41 0l-.71-.71A1 1 0 017.05 5.64l.71.71a1 1 0 010 1.41z"/></svg>
+  <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+</button>
+<div class="header">
+  <div class="logo">MiMo <em>TTS</em> Studio</div>
+  <div class="subtitle">chat/completions &middot; assistant role &middot; TTS &middot; Voice Design &middot; Clone &middot; ASR</div>
+</div>
+<div class="container">
+  <!-- 01 API Config -->
+  <div class="section" id="apiSection" style="animation:fadeSlideUp .4s ease forwards">
+    <div class="section-hd" id="apiSectionHd">
+      <span class="section-num">01</span><span class="section-title">API 配置</span>
+      <button class="collapse-btn" id="apiCollapseBtn" title="收起">&minus;</button>
+    </div>
+    <div class="section-body" id="apiSectionBody">
+      <div style="padding-top:1.2rem">
+        <div class="form-g">
+          <label>Base URL <span class="hint">拼接为 /chat/completions</span></label>
+          <div class="url-presets" id="urlPresets">
+            <button class="url-preset active" data-url="https://api.mimo.xiaomi.com/v1">小米官方</button>
+            <button class="url-preset" data-url="https://token-plan-cn.xiaomimimo.com/v1">Token Plan</button>
+            <button class="url-preset" data-url="">自定义</button>
+          </div>
+          <input type="text" id="baseUrl" value="https://api.mimo.xiaomi.com/v1" placeholder="https://api.mimo.xiaomi.com/v1">
+        </div>
+        <div class="form-g">
+          <label>API Key</label>
+          <div class="pw-wrap">
+            <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxx">
+            <button class="pw-toggle" id="pwToggle" title="显示">&#128065;</button>
+          </div>
+        </div>
+        <div class="form-g">
+          <label>音频格式</label>
+          <select id="format"><option value="mp3">MP3</option><option value="wav">WAV</option><option value="flac">FLAC</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Mode Selector -->
+  <div class="mode-selector" id="modeSelector" style="animation:fadeSlideUp .4s ease .05s forwards;opacity:0">
+    <div class="mode-card active" data-mode="tts">
+      <svg class="mode-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8.5v7a4.47 4.47 0 002.5-3.5zM14 3.23v2.06a6.5 6.5 0 010 13.42v2.06A8.5 8.5 0 0014 3.23z"/></svg>
+      <div class="mode-label">语音合成</div>
+    </div>
+    <div class="mode-card" data-mode="voicedesign">
+      <svg class="mode-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86zm2-15.86c1.03.13 2 .45 2.87.93H13v-.93zM13 7h5.24c.25.31.48.65.68 1H13V7zm0 3h6.74c.08.33.15.66.18 1H13v-1zm0 3h6.92a7.09 7.09 0 01-.18 1H13v-1zm0 3h5.87a6.96 6.96 0 01-.68 1H13v-1z"/></svg>
+      <div class="mode-label">音色设计</div>
+    </div>
+    <div class="mode-card" data-mode="voiceclone">
+      <svg class="mode-icon" viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 00-2 2v14h2V3h12V1zm3 4H8a2 2 0 00-2 2v14a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2zm0 16H8V7h11v14z"/></svg>
+      <div class="mode-label">音色克隆</div>
+    </div>
+    <div class="mode-card" data-mode="asr">
+      <svg class="mode-icon" viewBox="0 0 24 24"><path d="M12 15c1.66 0 2.99-1.34 2.99-3L15 6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V6z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+      <div class="mode-label">语音识别</div>
+    </div>
+  </div>
+  <!-- 02 Mode Panels -->
+  <div class="section" id="panelSection" style="animation:fadeSlideUp .4s ease .1s forwards;opacity:0">
+    <div class="section-hd"><span class="section-num">02</span><span class="section-title" id="panelTitle">语音合成</span></div>
+    <!-- TTS -->
+    <div class="mode-panel active" id="panelTts">
+      <div class="form-g"><label>音色 Voice</label>
+        <select id="ttsVoice"><option value="mimo_default">mimo_default — 默认</option><option value="冰糖">冰糖</option><option value="茉莉">茉莉</option><option value="苏打">苏打</option><option value="白桦">白桦</option><option value="Mia">Mia</option><option value="Chloe">Chloe</option><option value="Milo">Milo</option><option value="Dean">Dean</option><option value="custom">自定义 ID...</option></select></div>
+      <div class="form-g" id="ttsCustomVoiceG" style="display:none"><label>自定义音色 ID</label><input type="text" id="ttsCustomVoice" placeholder="音色 ID"></div>
+      <div class="form-g"><label>风格指令 <span class="hint">填入 user 消息，控制播报风格</span></label><input type="text" id="ttsStyle" value="自然、清晰、情感丰富地朗读以下文本" placeholder="自然、清晰、情感丰富地朗读"></div>
+      <div class="form-g"><label>语速 <span class="hint">0.25 – 4.0</span></label>
+        <div class="range-row"><input type="range" id="ttsSpeed" min="0.25" max="4.0" step="0.05" value="1.0"><span class="range-val" id="ttsSpeedVal">1.00</span></div></div>
+      <div class="grid-2">
+        <div class="form-g"><label>音调 <span class="hint">-20 ~ 20</span></label><div class="range-row"><input type="range" id="ttsPitch" min="-20" max="20" step="0.5" value="0"><span class="range-val" id="ttsPitchVal">0</span></div></div>
+        <div class="form-g"><label>音量 <span class="hint">dB</span></label><div class="range-row"><input type="range" id="ttsVolume" min="-20" max="20" step="0.5" value="0"><span class="range-val" id="ttsVolumeVal">0 dB</span></div></div>
+      </div>
+      <div style="margin-top:.5rem">
+        <button class="coll-toggle" id="advToggle"><span class="arr">&#9654;</span><span style="font-size:.78rem;color:var(--text-sec)">高级参数</span></button>
+        <div class="coll-body" id="advBody"><div style="padding-top:.8rem">
+          <div class="grid-2">
+            <div class="form-g"><label>情感</label><select id="ttsEmotion"><option value="">不指定</option><option value="neutral">中性</option><option value="happy">开心</option><option value="sad">悲伤</option><option value="angry">愤怒</option><option value="gentle">温柔</option><option value="whisper">低语</option></select></div>
+            <div class="form-g"><label>语言</label><select id="ttsLang"><option value="">自动</option><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option></select></div>
+          </div>
+          <div class="form-g"><label>风格强度 <span class="hint">0 – 2</span></label><div class="range-row"><input type="range" id="ttsStyleStrength" min="0" max="2" step="0.05" value="1"><span class="range-val" id="ttsStyleStrengthVal">1.00</span></div></div>
+        </div></div>
+      </div>
+      <div class="form-g" style="margin-top:.8rem"><label>播报文本 <span class="hint">→ assistant content</span></label>
+        <textarea id="ttsText" placeholder="输入要合成的文本内容..."></textarea>
+        <div class="char-ctr" id="ttsCharCtr">0 / 4096</div></div>
+    </div>
+    <!-- Voice Design -->
+    <div class="mode-panel" id="panelVoicedesign">
+      <div class="form-g"><label>音色描述 <span class="hint">→ user content</span></label>
+        <textarea id="vdDesc" placeholder="例如：一个温暖磁性的中年男声，沉稳而富有感染力，带有轻微北方口音..." style="min-height:130px"></textarea></div>
+      <div class="form-g"><label>播报文本 <span class="hint">→ assistant content</span></label><textarea id="vdText" placeholder="输入试听文本..."></textarea></div>
+      <div class="grid-2">
+        <div class="form-g"><label>语速</label><div class="range-row"><input type="range" id="vdSpeed" min="0.25" max="4.0" step="0.05" value="1.0"><span class="range-val" id="vdSpeedVal">1.00</span></div></div>
+        <div class="form-g"><label>语言</label><select id="vdLang"><option value="">自动</option><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option></select></div>
+      </div>
+      <div class="form-g" style="margin-top:.5rem"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer"><input type="checkbox" id="vdOptimizeText" checked> <span>优化文本预览 <span class="hint">optimize_text_preview</span></span></label></div>
+    </div>
+    <!-- Voice Clone -->
+    <div class="mode-panel" id="panelVoiceclone">
+      <div class="form-g"><label>参考音频 <span class="hint">录制或上传 5-30 秒 → audio.reference_audio</span></label>
+        <div class="audio-input" id="cloneAudioInput">
+          <div class="method-tabs">
+            <button class="method-tab active" data-method="record" data-target="clone">录制</button>
+            <button class="method-tab" data-method="upload" data-target="clone">上传</button>
+          </div>
+          <div class="record-ui" id="cloneRecUI">
+            <button class="rec-btn" id="cloneRecBtn" onclick="toggleRecord('clone')"><div class="rec-dot"></div></button>
+            <div class="rec-timer" id="cloneRecTimer">00:00</div>
+            <div class="wave-bars" id="cloneWaveBars"><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span></div>
+            <div class="rec-hint">点击录制参考音频</div>
+          </div>
+          <div class="upload-ui hidden" id="cloneUploadUI">
+            <div class="drop-zone" id="cloneDropZone">
+              <svg class="drop-zone-icon" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+              <p>拖拽或点击上传</p><div class="sub">MP3, WAV, FLAC, M4A</div>
+              <input type="file" accept="audio/*" id="cloneFileInput" onchange="handleFileSelect(event,'clone')">
+            </div>
+          </div>
+          <div class="audio-preview hidden" id="clonePreview">
+            <audio controls id="clonePreviewAudio"></audio>
+            <span class="file-info" id="cloneFileInfo"></span>
+            <button class="re-btn" onclick="clearAudio('clone')">重新选择</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-g"><label>风格指令 <span class="hint">→ user content</span></label><input type="text" id="vcStyle" value="用以下参考音色自然、清晰地朗读" placeholder="用以下参考音色自然、清晰地朗读"></div>
+      <div class="form-g"><label>播报文本 <span class="hint">→ assistant content</span></label><textarea id="vcText" placeholder="让克隆音色朗读的文本..."></textarea></div>
+      <div class="form-g"><label>语速</label><div class="range-row"><input type="range" id="vcSpeed" min="0.25" max="4.0" step="0.05" value="1.0"><span class="range-val" id="vcSpeedVal">1.00</span></div></div>
+    </div>
+    <!-- ASR -->
+    <div class="mode-panel" id="panelAsr">
+      <div class="form-g"><label>音频输入</label>
+        <div class="audio-input" id="asrAudioInput">
+          <div class="method-tabs">
+            <button class="method-tab active" data-method="record" data-target="asr">录制</button>
+            <button class="method-tab" data-method="upload" data-target="asr">上传</button>
+          </div>
+          <div class="record-ui" id="asrRecUI">
+            <button class="rec-btn" id="asrRecBtn" onclick="toggleRecord('asr')"><div class="rec-dot"></div></button>
+            <div class="rec-timer" id="asrRecTimer">00:00</div>
+            <div class="wave-bars" id="asrWaveBars"><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span></div>
+            <div class="rec-hint">点击录制</div>
+          </div>
+          <div class="upload-ui hidden" id="asrUploadUI">
+            <div class="drop-zone" id="asrDropZone">
+              <svg class="drop-zone-icon" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+              <p>拖拽或点击上传</p><div class="sub">MP3, WAV, FLAC, M4A</div>
+              <input type="file" accept="audio/*" id="asrFileInput" onchange="handleFileSelect(event,'asr')">
+            </div>
+          </div>
+          <div class="audio-preview hidden" id="asrPreview">
+            <audio controls id="asrPreviewAudio"></audio>
+            <span class="file-info" id="asrFileInfo"></span>
+            <button class="re-btn" onclick="clearAudio('asr')">重新选择</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-g"><label>识别语言</label>
+        <select id="asrLang"><option value="">自动</option><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option></select></div>
+    </div>
+  </div>
+  <button class="gen-btn" id="genBtn" onclick="generate()"><span class="bt" id="genBtnText">生成语音</span><span class="bl"><span class="spinner"></span></span></button>
+  <!-- ASR Result -->
+  <div class="result-area" id="resultArea">
+    <div class="result-box"><h3>识别结果</h3>
+      <div class="result-text" id="resultText"></div>
+      <div class="result-meta" id="resultMeta"></div>
+      <div class="result-actions"><button class="act-btn" onclick="navigator.clipboard.writeText(document.getElementById('resultText').textContent).then(()=>toast('已复制','ok'))">复制文本</button></div>
+    </div>
+  </div>
+  <!-- Player -->
+  <div class="player" id="player">
+    <div class="player-hd"><span class="player-title">播放结果</span><span class="meta-tag" id="respTime"></span></div>
+    <div class="player-meta" id="playerMeta"></div>
+    <div class="ctrls">
+      <button class="play-btn" id="playBtn" onclick="togglePlay()"><svg id="playIcon" viewBox="0 0 16 16"><polygon points="3,1 14,8 3,15"/></svg><svg id="pauseIcon" viewBox="0 0 16 16" style="display:none"><rect x="2" y="1" width="4" height="14"/><rect x="10" y="1" width="4" height="14"/></svg></button>
+      <div class="prog-bar" id="progBar" onclick="seekAudio(event)"><div class="prog-fill" id="progFill"></div></div>
+      <span class="time-txt" id="timeTxt">0:00 / 0:00</span>
+    </div>
+    <audio id="audio" style="display:none"></audio>
+    <div style="display:flex;gap:.5rem;margin-top:.5rem">
+      <button class="act-btn" onclick="downloadAudio()">&#8615; 下载</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let currentMode='tts',audioBlob=null,audioUrl=null;
+const recorders={};
+document.addEventListener('DOMContentLoaded',()=>{
+  initTheme();initPersistence();initApiCollapse();initUrlPresets();
+  initModeSelector();initSliders();initMethodTabs();initCollapsibles();
+  initCharCount();initTtsVoiceToggle();
+});
+
+// Theme
+function initTheme(){const t=localStorage.getItem('mimo_theme');if(t)document.documentElement.setAttribute('data-theme',t);}
+document.getElementById('themeToggle').addEventListener('click',()=>{const n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('mimo_theme',n);});
+document.getElementById('pwToggle').addEventListener('click',function(){const i=document.getElementById('apiKey');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'\uD83D\uDC41':'\uD83D\uDE48';});
+
+// Persistence
+function initPersistence(){
+  const sk=localStorage.getItem('mimo_api_key'),su=localStorage.getItem('mimo_base_url'),sf=localStorage.getItem('mimo_format');
+  if(sk)document.getElementById('apiKey').value=sk;
+  if(su){document.getElementById('baseUrl').value=su;let m=false;document.querySelectorAll('.url-preset').forEach(b=>{b.classList.remove('active');if(b.dataset.url===su){b.classList.add('active');m=true;}});if(!m)document.querySelector('.url-preset[data-url=""]').classList.add('active');}
+  if(sf)document.getElementById('format').value=sf;
+  document.getElementById('apiKey').addEventListener('input',function(){localStorage.setItem('mimo_api_key',this.value);});
+  document.getElementById('baseUrl').addEventListener('input',function(){localStorage.setItem('mimo_base_url',this.value);});
+  document.getElementById('format').addEventListener('change',function(){localStorage.setItem('mimo_format',this.value);});
+}
+
+// API Collapse
+function initApiCollapse(){
+  const btn=document.getElementById('apiCollapseBtn'),body=document.getElementById('apiSectionBody'),hd=document.getElementById('apiSectionHd');
+  if(localStorage.getItem('mimo_api_collapsed')==='1'){body.classList.add('collapsed');btn.textContent='+';hd.classList.add('no-mb');}
+  btn.addEventListener('click',e=>{e.stopPropagation();const c=body.classList.toggle('collapsed');btn.textContent=c?'+':'−';hd.classList.toggle('no-mb',c);localStorage.setItem('mimo_api_collapsed',c?'1':'0');});
+}
+
+// URL Presets
+function initUrlPresets(){document.querySelectorAll('.url-preset').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.url-preset').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const u=btn.dataset.url,i=document.getElementById('baseUrl');if(u){i.value=u;localStorage.setItem('mimo_base_url',u);}else{i.value='';i.focus();}});});}
+
+// Mode Selector
+function initModeSelector(){document.querySelectorAll('.mode-card').forEach(card=>{card.addEventListener('click',()=>{document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('active'));card.classList.add('active');currentMode=card.dataset.mode;switchPanel(currentMode);});});}
+function switchPanel(m){
+  const p={tts:'panelTts',voicedesign:'panelVoicedesign',voiceclone:'panelVoiceclone',asr:'panelAsr'};
+  const t={tts:'语音合成',voicedesign:'音色设计',voiceclone:'音色克隆',asr:'语音识别'};
+  const b={tts:'生成语音',voicedesign:'生成试听',voiceclone:'生成语音',asr:'开始识别'};
+  document.querySelectorAll('.mode-panel').forEach(x=>x.classList.remove('active'));
+  document.getElementById(p[m]).classList.add('active');
+  document.getElementById('panelTitle').textContent=t[m];
+  document.getElementById('genBtnText').textContent=b[m];
+  document.getElementById('resultArea').classList.remove('visible');
+  if(m==='asr')document.getElementById('player').classList.remove('visible');
+}
+
+// Sliders
+function initSliders(){
+  [['ttsSpeed','ttsSpeedVal',v=>parseFloat(v).toFixed(2)],['ttsPitch','ttsPitchVal',v=>parseInt(v)],['ttsVolume','ttsVolumeVal',v=>parseInt(v)+' dB'],['ttsStyleStrength','ttsStyleStrengthVal',v=>parseFloat(v).toFixed(2)],['vdSpeed','vdSpeedVal',v=>parseFloat(v).toFixed(2)],['vcSpeed','vcSpeedVal',v=>parseFloat(v).toFixed(2)]].forEach(([id,vid,fmt])=>{const el=document.getElementById(id),v=document.getElementById(vid);if(el&&v)el.addEventListener('input',()=>{v.textContent=fmt(el.value);});});
+}
+function initTtsVoiceToggle(){document.getElementById('ttsVoice').addEventListener('change',function(){document.getElementById('ttsCustomVoiceG').style.display=this.value==='custom'?'block':'none';});}
+function initCharCount(){const ta=document.getElementById('ttsText'),ctr=document.getElementById('ttsCharCtr');ta.addEventListener('input',()=>{const l=ta.value.length;ctr.textContent=l+' / 4096';ctr.className='char-ctr'+(l>4096?' err':l>3500?' warn':'');});}
+function initMethodTabs(){document.querySelectorAll('.method-tab').forEach(tab=>{tab.addEventListener('click',()=>{const t=tab.dataset.target,m=tab.dataset.method,p=tab.closest('.audio-input');p.querySelectorAll('.method-tab').forEach(x=>x.classList.remove('active'));tab.classList.add('active');document.getElementById(t+'RecUI').classList.toggle('hidden',m!=='record');document.getElementById(t+'UploadUI').classList.toggle('hidden',m!=='upload');});});}
+function initCollapsibles(){[['advToggle','advBody']].forEach(([tid,bid])=>{const t=document.getElementById(tid),b=document.getElementById(bid);t.addEventListener('click',()=>{t.classList.toggle('expanded');b.classList.toggle('expanded');});});}
+
+// Recording
+function toggleRecord(t){const s=recorders[t];if(s&&s.recording)stopRecording(t);else startRecording(t);}
+async function startRecording(target){
+  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  const rec=new MediaRecorder(stream),chunks=[];const t0=Date.now();
+  rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+  rec.onstop=()=>{setAudioBlob(target,new Blob(chunks,{type:rec.mimeType||'audio/webm'}),'recording.webm');stream.getTracks().forEach(t=>t.stop());clearInterval(recorders[target].interval);};
+  rec.start();recorders[target]={recorder:rec,recording:true,stream};
+  const btn=document.getElementById(target+'RecBtn'),timer=document.getElementById(target+'RecTimer'),bars=document.getElementById(target+'WaveBars');
+  btn.classList.add('recording');timer.classList.add('active');bars.classList.add('active');
+  const wbs=bars.querySelectorAll('.wb');
+  recorders[target].interval=setInterval(()=>{const el=Math.floor((Date.now()-t0)/1000);timer.textContent=String(Math.floor(el/60)).padStart(2,'0')+':'+String(el%60).padStart(2,'0');wbs.forEach(wb=>{wb.style.height=(15+Math.random()*70)+'%';});},120);
+  }catch(e){toast('麦克风访问失败: '+e.message,'err');}
+}
+function stopRecording(target){const s=recorders[target];if(!s||!s.recorder)return;s.recorder.stop();s.recording=false;document.getElementById(target+'RecBtn').classList.remove('recording');document.getElementById(target+'RecTimer').classList.remove('active');const b=document.getElementById(target+'WaveBars');b.classList.remove('active');b.querySelectorAll('.wb').forEach(w=>w.style.height='5px');}
+function handleFileSelect(e,target){const f=e.target.files[0];if(f)setAudioBlob(target,f,f.name);}
+function setAudioBlob(target,blob,filename){
+  if(!recorders[target])recorders[target]={};recorders[target].blob=blob;recorders[target].filename=filename;
+  const url=URL.createObjectURL(blob);document.getElementById(target+'PreviewAudio').src=url;
+  document.getElementById(target+'FileInfo').textContent=filename+' ('+(blob.size/1024).toFixed(1)+' KB)';
+  document.getElementById(target+'Preview').classList.remove('hidden');
+  document.getElementById(target+'RecUI').classList.add('hidden');document.getElementById(target+'UploadUI').classList.add('hidden');
+}
+function clearAudio(target){
+  if(recorders[target]){recorders[target].blob=null;recorders[target].filename=null;}
+  document.getElementById(target+'Preview').classList.add('hidden');document.getElementById(target+'PreviewAudio').src='';
+  document.getElementById(target+'RecUI').classList.remove('hidden');
+  const fi=document.getElementById(target+'FileInput');if(fi)fi.value='';
+  const p=document.getElementById(target+'AudioInput'),at=p.querySelector('.method-tab.active');
+  if(at&&at.dataset.method==='upload'){document.getElementById(target+'UploadUI').classList.remove('hidden');document.getElementById(target+'RecUI').classList.add('hidden');}
+}
+document.querySelectorAll('.drop-zone').forEach(zone=>{zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('audio/')){const t=zone.closest('.audio-input').id.replace('AudioInput','');setAudioBlob(t,f,f.name);}});});
+
+function readFileAsBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onloadend=()=>{const b64=r.result.split(',')[1];res({base64:b64,mime:blob.type||'audio/webm'});};r.onerror=rej;r.readAsDataURL(blob);});}
+
+// ===== Build Request =====
+async function buildRequest(){
+  const base=document.getElementById('baseUrl').value.trim().replace(/\/+$/,'');
+  const url=base+'/chat/completions';
+  const fmt=document.getElementById('format').value;
+  const apiKey=document.getElementById('apiKey').value.trim();
+  if(!base)throw new Error('请填写 Base URL');
+  if(!apiKey)throw new Error('请填写 API Key');
+
+  const modelMap={tts:'mimo-v2.5-tts',voicedesign:'mimo-v2.5-tts-voicedesign',voiceclone:'mimo-v2.5-tts-voiceclone',asr:'mimo-v2.5-ASR'};
+
+  if(currentMode==='tts'){
+    const vs=document.getElementById('ttsVoice').value;
+    const voice=vs==='custom'?document.getElementById('ttsCustomVoice').value.trim():vs;
+    const styleInput=document.getElementById('ttsStyle').value.trim()||'自然、清晰地朗读';
+    const text=document.getElementById('ttsText').value.trim();
+    if(!text)throw new Error('请输入播报文本');
+
+    const audio={format:'pcm16',voice};
+    const speed=parseFloat(document.getElementById('ttsSpeed').value);if(Math.abs(speed-1)>0.01)audio.speed=speed;
+    const pitch=parseFloat(document.getElementById('ttsPitch').value);if(pitch!==0)audio.pitch=pitch;
+    const volume=parseFloat(document.getElementById('ttsVolume').value);if(volume!==0)audio.volume=volume;
+    const emotion=document.getElementById('ttsEmotion').value;if(emotion)audio.emotion=emotion;
+    const lang=document.getElementById('ttsLang').value;if(lang)audio.language=lang;
+    const styleS=parseFloat(document.getElementById('ttsStyleStrength').value);if(Math.abs(styleS-1)>0.01)audio.style_degree=styleS;
+
+    const body={
+      model:modelMap.tts,
+      messages:[
+        {role:'user',content:styleInput},
+        {role:'assistant',content:text}
+      ],
+      audio,
+      stream:true
+    };
+    return{url,method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify(body),mode:'audio'};
+  }
+
+  if(currentMode==='voicedesign'){
+    const desc=document.getElementById('vdDesc').value.trim();
+    const text=document.getElementById('vdText').value.trim();
+    if(!desc)throw new Error('请输入音色描述');
+    if(!text)throw new Error('请输入播报文本');
+    const lang=document.getElementById('vdLang').value;
+    const speed=parseFloat(document.getElementById('vdSpeed').value);
+    const audio={format:'pcm16'};if(Math.abs(speed-1)>0.01)audio.speed=speed;if(lang)audio.language=lang;const vdOpt=document.getElementById('vdOptimizeText').checked;if(vdOpt)audio.optimize_text_preview=true;
+
+    const body={
+      model:modelMap.voicedesign,
+      messages:[
+        {role:'user',content:desc},
+        {role:'assistant',content:text}
+      ],
+      audio,
+      stream:true
+    };
+    return{url,method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify(body),mode:'audio'};
+  }
+
+  if(currentMode==='voiceclone'){
+    const blob=recorders.clone?.blob;if(!blob)throw new Error('请录制或上传参考音频');
+    const text=document.getElementById('vcText').value.trim();if(!text)throw new Error('请输入播报文本');
+    const styleInput=document.getElementById('vcStyle').value.trim()||'用参考音色自然地朗读';
+    const {base64}=await readFileAsBase64(blob);
+    const speed=parseFloat(document.getElementById('vcSpeed').value);
+    const audio={format:'pcm16',reference_audio:base64};if(Math.abs(speed-1)>0.01)audio.speed=speed;
+
+    const body={
+      model:modelMap.voiceclone,
+      messages:[
+        {role:'user',content:styleInput},
+        {role:'assistant',content:text}
+      ],
+      audio,
+      stream:true
+    };
+    return{url,method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify(body),mode:'audio'};
+  }
+
+  if(currentMode==='asr'){
+    const blob=recorders.asr?.blob;if(!blob)throw new Error('请录制或上传待识别音频');
+    const {base64}=await readFileAsBase64(blob);
+    const lang=document.getElementById('asrLang').value;
+
+    const body={
+      model:modelMap.asr,
+      messages:[{role:'user',content:[{type:'input_audio',input_audio:{data:base64,format:blob.type.split('/')[1]||'webm'}}]}],
+      stream:false
+    };
+    return{url,method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify(body),mode:'asr'};
+  }
+}
+
+// Audio decode
+function b64ToBlob(b64,mime){const raw=atob(b64);const a=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)a[i]=raw.charCodeAt(i);return new Blob([a],{type:mime});}
+function b64ToUint8Array(b64){const raw=atob(b64);const a=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)a[i]=raw.charCodeAt(i);return a;}
+function mergeChunks(chunks){return new Blob(chunks.map(c=>b64ToUint8Array(c)),{type:'audio/pcm'});}
+function pcm16ToWav(pcmData,sampleRate=24000){
+  const numChannels=1,bitsPerSample=16;
+  const byteRate=sampleRate*numChannels*bitsPerSample/8;
+  const blockAlign=numChannels*bitsPerSample/8;
+  const dataSize=pcmData.length;
+  const buffer=new ArrayBuffer(44+dataSize);
+  const v=new DataView(buffer);
+  const writeStr=(off,str)=>{for(let i=0;i<str.length;i++)v.setUint8(off+i,str.charCodeAt(i));};
+  writeStr(0,'RIFF');v.setUint32(4,36+dataSize,true);writeStr(8,'WAVE');
+  writeStr(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);
+  v.setUint16(22,numChannels,true);v.setUint32(24,sampleRate,true);
+  v.setUint32(28,byteRate,true);v.setUint16(32,blockAlign,true);
+  v.setUint16(34,bitsPerSample,true);writeStr(36,'data');
+  v.setUint32(40,dataSize,true);
+  new Uint8Array(buffer,44).set(pcmData);
+  return new Blob([buffer],{type:'audio/wav'});
+}
+function pcm16ToMp3(pcmData,sampleRate=24000,bitrate=128){
+  if(typeof lamejs==='undefined')return pcm16ToWav(pcmData,sampleRate);
+  const channels=1;const mp3enc=new lamejs.Mp3Encoder(channels,sampleRate,bitrate);
+  const blockSize=1152;const mp3Data=[];
+  const int16=new Int16Array(pcmData.buffer,pcmData.byteOffset,pcmData.length/2);
+  for(let i=0;i<int16.length;i+=blockSize){
+    const chunk=int16.subarray(i,i+blockSize);
+    const mp3buf=mp3enc.encodeBuffer(chunk);
+    if(mp3buf.length>0)mp3Data.push(new Uint8Array(mp3buf));
+  }
+  const end=mp3enc.flush();
+  if(end.length>0)mp3Data.push(new Uint8Array(end));
+  return new Blob(mp3Data,{type:'audio/mpeg'});
+}
+function pcm16ToFlac(pcmData,sampleRate=24000){
+  const wavBlob=pcm16ToWav(pcmData,sampleRate);return wavBlob;
+}
+async function parseSSEStream(reader,onChunk){const d=new TextDecoder();let buf='';while(true){const{done,value}=await reader.read();if(done)break;buf+=d.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();for(const line of lines){if(line.startsWith('data:')){const data=line.slice(5).trim();if(data==='[DONE]')return;try{onChunk(JSON.parse(data));}catch{}}}}}
+
+// ===== Generate =====
+async function generate(){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  const base=document.getElementById('baseUrl').value.trim();
+  const fmt=document.getElementById('format').value;
+  if(!base)return toast('请填写 Base URL','err');
+  if(!apiKey)return toast('请填写 API Key','err');
+  let req;try{req=await buildRequest();}catch(e){if(e.message.startsWith('请'))return toast(e.message,'err');throw e;}
+  const btn=document.getElementById('genBtn');btn.classList.add('loading');btn.disabled=true;
+  try{
+    console.log('[MiMo] POST',req.url);
+    const t0=performance.now();
+    const resp=await fetch(req.url,{method:'POST',headers:req.headers,body:req.body});
+    const elapsed=((performance.now()-t0)/1000).toFixed(2);
+    console.log('[MiMo] Status:',resp.status,resp.headers.get('content-type'));
+
+    if(!resp.ok){
+      let msg=`HTTP ${resp.status}`;
+      try{const et=await resp.text();console.error('[MiMo] Err:',et);try{const j=JSON.parse(et);msg+=': '+(j.error?.message||j.message||et.substring(0,300));}catch{msg+=': '+et.substring(0,300);}}catch{}
+      throw new Error(msg);
+    }
+
+    if(req.mode==='asr'){
+      const data=await resp.json();
+      const text=data.choices?.[0]?.message?.content||data.text||JSON.stringify(data,null,2);
+      document.getElementById('resultText').textContent=text;
+      document.getElementById('resultMeta').innerHTML='<span class="meta-tag">ASR</span><span class="meta-tag">耗时 '+elapsed+'s</span>';
+      document.getElementById('resultArea').classList.add('visible');
+      document.getElementById('player').classList.remove('visible');
+      toast('识别完成 ('+elapsed+'s)','ok');
+    } else {
+      const ct=resp.headers.get('content-type')||'';
+      let gotAudio=false;
+
+      if(ct.includes('event-stream')||ct.includes('text/plain')){
+        const reader=resp.body.getReader();const chunks=[];
+        const btn=document.getElementById('genBtn');
+        const txtLen=(req.body.match(/"content":"([^"]*)"/)||['',''])[1].length||100;
+        const estChunks=Math.max(5,Math.ceil(txtLen/50));
+        await parseSSEStream(reader,p=>{
+          const d=p.choices?.[0]?.delta?.audio?.data;
+          if(d){chunks.push(d);gotAudio=true;}
+          if(typeof p.choices?.[0]?.delta?.audio==='string'){chunks.push(p.choices[0].delta.audio);gotAudio=true;}
+          const pct=Math.min(95,Math.round(chunks.length/estChunks*100));
+          btn.querySelector('.bt').textContent='接收中 '+pct+'% ('+chunks.length+'/'+estChunks+')';
+        });
+        btn.querySelector('.bt').textContent='解码音频...';
+        if(chunks.length>0){
+          const pcmBlob=mergeChunks(chunks);
+          const pcmArr=new Uint8Array(await pcmBlob.arrayBuffer());
+          if(fmt==='mp3')audioBlob=pcm16ToMp3(pcmArr);
+          else if(fmt==='flac')audioBlob=pcm16ToFlac(pcmArr);
+          else audioBlob=pcm16ToWav(pcmArr);
+          gotAudio=true;
+        }
+      } else if(ct.includes('application/json')){
+        const data=await resp.json();
+        const b64=data.choices?.[0]?.message?.audio?.data||data.choices?.[0]?.audio?.data||data.audio?.data||data.data;
+        if(b64){audioBlob=b64ToBlob(b64,'audio/'+fmt);gotAudio=true;}
+        else{
+          const tc=data.choices?.[0]?.message?.content;
+          if(tc){document.getElementById('resultText').textContent=tc;document.getElementById('resultArea').classList.add('visible');document.getElementById('player').classList.remove('visible');toast('完成 ('+elapsed+'s)','ok');throw null;}
+          throw new Error('响应中未找到音频数据\n字段: '+Object.keys(data).join(', '));
+        }
+      } else {audioBlob=await resp.blob();if(audioBlob.size>0)gotAudio=true;}
+
+      if(!gotAudio||!audioBlob||audioBlob.size===0)throw new Error('未获取到音频数据');
+      if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=URL.createObjectURL(audioBlob);
+      const a=document.getElementById('audio');a.src=audioUrl;a.load();
+      document.getElementById('respTime').textContent=elapsed+'s';
+      const mm={tts:'mimo-v2.5-tts',voicedesign:'mimo-v2.5-tts-voicedesign',voiceclone:'mimo-v2.5-tts-voiceclone'};
+      document.getElementById('playerMeta').innerHTML='<span class="meta-tag">'+(mm[currentMode]||'')+'</span><span class="meta-tag">'+fmt.toUpperCase()+'</span><span class="meta-tag">'+(audioBlob.size/1024).toFixed(1)+' KB</span>';
+      document.getElementById('player').classList.add('visible');document.getElementById('resultArea').classList.remove('visible');
+      setTimeout(()=>document.getElementById('player').scrollIntoView({behavior:'smooth',block:'start'}),100);
+      toast('生成成功 ('+elapsed+'s)','ok');
+    }
+  }catch(e){
+    if(!e)return;
+    let msg=e.message;if(e.name==='TypeError'||msg.includes('fetch'))msg='网络请求失败\n\n请求: '+req.url;
+    toast(msg,'err');
+  }finally{
+    btn.classList.remove('loading');btn.disabled=false;
+    const b={tts:'生成语音',voicedesign:'生成试听',voiceclone:'生成语音',asr:'开始识别'};
+    document.getElementById('genBtnText').textContent=b[currentMode]||'生成语音';
+  }
+}
+
+// Player
+function togglePlay(){const a=document.getElementById('audio');a.paused?a.play():a.pause();}
+document.getElementById('audio').addEventListener('play',()=>{document.getElementById('playIcon').style.display='none';document.getElementById('pauseIcon').style.display='block';});
+document.getElementById('audio').addEventListener('pause',()=>{document.getElementById('playIcon').style.display='block';document.getElementById('pauseIcon').style.display='none';});
+document.getElementById('audio').addEventListener('timeupdate',function(){document.getElementById('progFill').style.width=(this.currentTime/this.duration*100||0)+'%';document.getElementById('timeTxt').textContent=fmtT(this.currentTime)+' / '+fmtT(this.duration);});
+document.getElementById('audio').addEventListener('ended',()=>{document.getElementById('playIcon').style.display='block';document.getElementById('pauseIcon').style.display='none';document.getElementById('progFill').style.width='0%';});
+function seekAudio(e){const b=document.getElementById('progBar');document.getElementById('audio').currentTime=(e.offsetX/b.offsetWidth)*document.getElementById('audio').duration;}
+function downloadAudio(){if(!audioBlob)return;const a=document.createElement('a');a.href=audioUrl;a.download='mimo_'+currentMode+'_'+Date.now()+'.'+document.getElementById('format').value;a.click();}
+function fmtT(s){return!s||isNaN(s)?'0:00':Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast vis '+(type||'');clearTimeout(el._t);el._t=setTimeout(()=>el.className='toast',type==='err'?6000:3000);}
+</script>
+</body>
+</html>
